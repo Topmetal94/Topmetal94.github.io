@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Polet | Prodaja na veliko</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    font-family: Arial, sans-serif;
+}
+
+body {
+    margin: 0;
+    background: #f4f4f4;
+}
+
+/* HEADER */
+header {
+    background: #111;
+    color: #fff;
+    padding: 20px;
+    text-align: center;
+}
+
+header h1 {
+    margin: 0;
+}
+
+header p {
+    margin: 5px 0 0;
+}
+
+/* CONTAINER */
+.container {
+    padding: 20px;
+    max-width: 1200px;
+    margin: auto;
+}
+
+/* PRODUCTS */
+.products {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.product {
+    background: #fff;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+.product img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.product-content {
+    padding: 15px;
+}
+
+.product h3 {
+    margin: 0 0 10px;
+}
+
+.price {
+    color: green;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.product button {
+    width: 100%;
+    padding: 10px;
+    background: #25D366;
+    color: #fff;
+    border: none;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+.product button:hover {
+    background: #1da851;
+}
+
+/* FOOTER */
+footer {
+    background: #111;
+    color: #fff;
+    text-align: center;
+    padding: 15px;
+    margin-top: 30px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>POLET</h1>
+    <p>Prodaja na veliko i malo</p>
+</header>
+
+<div class="container">
+    <h2>Naši proizvodi</h2>
+
+    <div class="products">
+
+        <div class="product">
+            <img src="https://via.placeholder.com/400x300" alt="Proizvod 1">
+            <div class="product-content">
+                <h3>Proizvod 1</h3>
+                <div class="price">Cena: na upit</div>
+                <button onclick="order('Proizvod 1')">Poruči</button>
+            </div>
+        </div>
+
+        <div class="product">
+            <img src="https://via.placeholder.com/400x300" alt="Proizvod 2">
+            <div class="product-content">
+                <h3>Proizvod 2</h3>
+                <div class="price">Cena: na upit</div>
+                <button onclick="order('Proizvod 2')">Poruči</button>
+            </div>
+        </div>
+
+        <div class="product">
+            <img src="https://via.placeholder.com/400x300" alt="Proizvod 3">
+            <div class="product-content">
+                <h3>Proizvod 3</h3>
+                <div class="price">Cena: na upit</div>
+                <button onclick="order('Proizvod 3')">Poruči</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<footer>
+    <p>Kontakt: Viber / WhatsApp | © Polet</p>
+</footer>
+
+<script>
+function order(product) {
+    const phone = "381600000000"; // <-- OVDE upiši svoj broj
+    const text = encodeURIComponent("Zainteresovan sam za: " + product);
+    window.open("https://wa.me/" + phone + "?text=" + text, "_blank");
+}
+</script>
+
+</body>
+</html>
