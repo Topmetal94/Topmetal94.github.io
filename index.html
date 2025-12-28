@@ -1,120 +1,297 @@
-import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
-import json, os, re, random
-import zipfile, shutil
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Topmetal94 | Prodaja metala</title>
 
-from datetime import datetime
+<style>
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family: Arial, sans-serif;
+}
 
-# ---------- PDF + PNG/JPG ----------
-try:
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.styles import getSampleStyleSheet
-    PDF_OK = True
-except ImportError:
-    PDF_OK = False
+/* GORNJA TRAKA */
+.top-bar{
+    background:#000;
+    color:#fff;
+    padding:6px 30px;
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+}
 
-try:
-    import pyautogui
-    from PIL import Image
-    IMG_OK = True
-except ImportError:
-    IMG_OK = False
+/* HEADER */
+header{
+    background:#000;
+    padding:15px 30px;
+    display:flex;
+    align-items:center;
+    gap:30px;
+}
 
-# ---------- Matplotlib ----------
-try:
-    import matplotlib.pyplot as plt
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-    CHART_OK = True
-except ImportError:
-    CHART_OK = False
+.logo{
+    color:#f5c400;
+    font-size:26px;
+    font-weight:bold;
+}
 
-# ---------------- UNDO / REDO ----------------
-undo_stack = []
-redo_stack = []
+.search{
+    flex:1;
+    display:flex;
+}
 
-def push_snapshot():
-    """Save current stanje and MERE to undo stack before any change."""
-    undo_stack.append((ucitaj_stanje(), ucitaj_proiz()))
-    redo_stack.clear()
+.search input{
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:25px 0 0 25px;
+    outline:none;
+}
 
-def _restore_snapshot(snap):
-    prev_st, prev_mere = snap
-    sacuvaj_stanje(prev_st)
-    sacuvaj_proiz(prev_mere)
-    global MERE, PROIZVODI
-    MERE = prev_mere
-    PROIZVODI = list(MERE.keys())
-    proizvod_menu.configure(values=PROIZVODI)
+.search button{
+    padding:12px 20px;
+    border:none;
+    background:red;
+    color:#fff;
+    border-radius:0 25px 25px 0;
+    cursor:pointer;
+}
 
-def korak_unazad():
-    if not undo_stack:
-        messagebox.showinfo("Undo", "Nema više koraka unazad.")
-        return
-    redo_stack.append((ucitaj_stanje(), ucitaj_proiz()))
-    snap = undo_stack.pop()
-    _restore_snapshot(snap)
-    prikazi()
-def korak_unapred():
-    if not redo_stack:
-        messagebox.showinfo("Redo", "Nema više koraka unapred.")
-        return
-    undo_stack.append((ucitaj_stanje(), ucitaj_proiz()))
-    snap = redo_stack.pop()
-    _restore_snapshot(snap)
-    prikazi()
+.header-icons{
+    color:#fff;
+    display:flex;
+    gap:20px;
+}
 
-# ---------------------------------------------------------------
+/* MENI */
+nav{
+    background:#fff;
+    padding:12px 30px;
+    border-bottom:1px solid #ddd;
+}
 
-DATA_FILE      = "stanje_magacina.json"
-PROIZVODI_FILE = "proizvodi.json"
-LOG_FILE       = "log_magacin.json"
-BACKUP_META_FILE = "backup_meta.json"
+nav ul{
+    list-style:none;
+    display:flex;
+    gap:25px;
+}
 
-GORNJE_VALUTE = ["RSD","EUR","USD","CHF","GBP"]
-EVR_VALUTE    = ["ALL","AMD","AZN","BAM","BGN","CZK","DKK","GEL","HRK","HUF",
-                 "ISK","MDL","MKD","NOK","PLN","RON","RUB","SEK","TRY","UAH"]
-SVE_VALUTE = GORNJE_VALUTE + EVR_VALUTE
+nav ul li{
+    cursor:pointer;
+    font-weight:600;
+}
 
-# ---------- inicijalni fajlovi ----------
-for f, init in (
-    (DATA_FILE, {}),
-    (LOG_FILE , []),
-    (PROIZVODI_FILE, {
-        "Luster kuka":{
-            "3x30":{"cena":1.6,"valuta":"EUR","sifra":"LK-330"},
-            "4x40":{"cena":2.0,"valuta":"EUR","sifra":"LK-440"}},
-        "Rajber kuka":{
-            "5x50":{"cena":220,"valuta":"RSD","sifra":"RK-550"},
-            "6x60":{"cena":250,"valuta":"RSD","sifra":"RK-660"}},
-    })
-):
-    if not os.path.exists(f):
-        with open(f, "w", encoding="utf-8") as fp:
-            json.dump(init, fp, indent=4)
+nav ul li:hover{
+    color:red;
+}
 
-# ---------- helper (više nema lambda) ----------
-def ucitaj_stanje():
-    with open(DATA_FILE, encoding="utf-8") as f:
-        return json.load(f)
+/* BANER */
+.banner{
+    background:#d80000;
+    color:#fff;
+    margin:30px;
+    border-radius:10px;
+    padding:25px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+}
 
-def sacuvaj_stanje(s):
-    with open(DATA_FILE, "w", encoding="utf-8") as f:
-        json.dump(s, f, indent=4)
+.banner button{
+    background:#fff;
+    color:#000;
+    border:none;
+    padding:10px 18px;
+    cursor:pointer;
+    border-radius:6px;
+}
 
-def ucitaj_proiz():
-    with open(PROIZVODI_FILE, encoding="utf-8") as f:
-        return json.load(f)
+/* GLAVNI SADRŽAJ */
+.main{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:25px;
+    padding:0 30px;
+}
 
-def sacuvaj_proiz(p):
-    with open(PROIZVODI_FILE, "w", encoding="utf-8") as f:
-        json.dump(p, f, indent=4)
+/* VELIKI SLIDER */
+.big-card{
+    background:#e6eef1;
+    border-radius:12px;
+    padding:30px;
+    min-height:260px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+}
 
-def ucitaj_log():
-    with open(LOG_FILE, encoding="utf-8") as f:
-        return json.load(f)
+.big-card h2{
+    font-size:32px;
+}
 
-def sacuvaj_log(l):
-    with open(LOG_FILE, "w", encoding="utf-8") as f:
-        json.dump(l, f, indent=4)
+/* DESNA KARTICA */
+.side-card{
+    background:#c70000;
+    color:#fff;
+    border-radius:12px;
+    padding:25px;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+}
+
+.side-card button{
+    background:#fff;
+    border:none;
+    padding:10px;
+    cursor:pointer;
+    border-radius:6px;
+}
+
+/* PROIZVODI */
+.products{
+    padding:40px 30px;
+}
+
+.products h2{
+    margin-bottom:20px;
+}
+
+.product-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:20px;
+}
+
+.product{
+    background:#fff;
+    border-radius:10px;
+    padding:15px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.08);
+}
+
+.product img{
+    width:100%;
+    height:150px;
+    object-fit:cover;
+}
+
+.product h3{
+    margin:10px 0;
+}
+
+.price{
+    font-weight:bold;
+    color:#2e7d32;
+}
+
+.product button{
+    width:100%;
+    margin-top:10px;
+    padding:10px;
+    border:none;
+    background:#000;
+    color:#fff;
+    cursor:pointer;
+}
+
+/* FOOTER */
+footer{
+    background:#000;
+    color:#fff;
+    text-align:center;
+    padding:20px;
+    margin-top:40px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="top-bar">
+    <div>📞 Pozovite nas | ✉ Pišite nam</div>
+    <div>Prijava | Korpa</div>
+</div>
+
+<header>
+    <div class="logo">TOPMETAL94</div>
+
+    <div class="search">
+        <input type="text" placeholder="Pretražite proizvode...">
+        <button>🔍</button>
+    </div>
+
+    <div class="header-icons">
+        ❤️ Lista želja
+        🛒 Korpa
+    </div>
+</header>
+
+<nav>
+    <ul>
+        <li>Proizvodi</li>
+        <li>Akcije</li>
+        <li>Isporuka</li>
+        <li>Načini plaćanja</li>
+        <li>Kontakt</li>
+    </ul>
+</nav>
+
+<div class="banner">
+    <div>
+        <h2>Akcija Topmetal94</h2>
+        <p>Najbolje cene metala ove sezone</p>
+    </div>
+    <button>Saznajte više</button>
+</div>
+
+<div class="main">
+    <div class="big-card">
+        <h2>Praznična ponuda metala</h2>
+        <p>Profili, cevi i limovi na akciji</p>
+        <button>Saznaj više</button>
+    </div>
+
+    <div class="side-card">
+        <h3>Lista želja</h3>
+        <p>Sačuvaj proizvode za kasnije</p>
+        <button>Pogledaj</button>
+    </div>
+</div>
+
+<div class="products">
+    <h2>Izdvojeni proizvodi</h2>
+
+    <div class="product-grid">
+        <div class="product">
+            <img src="https://via.placeholder.com/300">
+            <h3>Čelične cevi</h3>
+            <div class="price">5.000 RSD</div>
+            <button>Dodaj u korpu</button>
+        </div>
+
+        <div class="product">
+            <img src="https://via.placeholder.com/300">
+            <h3>Metalni profili</h3>
+            <div class="price">3.500 RSD</div>
+            <button>Dodaj u korpu</button>
+        </div>
+
+        <div class="product">
+            <img src="https://via.placeholder.com/300">
+            <h3>Limovi</h3>
+            <div class="price">4.200 RSD</div>
+            <button>Dodaj u korpu</button>
+        </div>
+    </div>
+</div>
+
+<footer>
+    © 2025 Topmetal94 | Sva prava zadržana
+</footer>
+
+</body>
+</html>
