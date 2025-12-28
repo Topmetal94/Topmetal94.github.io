@@ -1,156 +1,120 @@
-<!DOCTYPE html>
-<html lang="sr">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Topmetal94 | Prodaja na veliko</title>
+import tkinter as tk
+from tkinter import ttk, messagebox, filedialog
+import json, os, re, random
+import zipfile, shutil
 
-<style>
-* {
-    box-sizing: border-box;
-    font-family: Arial, sans-serif;
-}
+from datetime import datetime
 
-body {
-    margin: 0;
-    background: #f4f4f4;
-}
+# ---------- PDF + PNG/JPG ----------
+try:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import getSampleStyleSheet
+    PDF_OK = True
+except ImportError:
+    PDF_OK = False
 
-/* HEADER */
-header {
-    background: #111;
-    color: #fff;
-    padding: 20px;
-    text-align: center;
-}
+try:
+    import pyautogui
+    from PIL import Image
+    IMG_OK = True
+except ImportError:
+    IMG_OK = False
 
-header h1 {
-    margin: 0;
-}
+# ---------- Matplotlib ----------
+try:
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+    CHART_OK = True
+except ImportError:
+    CHART_OK = False
 
-header p {
-    margin: 5px 0 0;
-}
+# ---------------- UNDO / REDO ----------------
+undo_stack = []
+redo_stack = []
 
-/* CONTAINER */
-.container {
-    padding: 20px;
-    max-width: 1200px;
-    margin: auto;
-}
+def push_snapshot():
+    """Save current stanje and MERE to undo stack before any change."""
+    undo_stack.append((ucitaj_stanje(), ucitaj_proiz()))
+    redo_stack.clear()
 
-/* PRODUCTS */
-.products {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-    gap: 20px;
-}
+def _restore_snapshot(snap):
+    prev_st, prev_mere = snap
+    sacuvaj_stanje(prev_st)
+    sacuvaj_proiz(prev_mere)
+    global MERE, PROIZVODI
+    MERE = prev_mere
+    PROIZVODI = list(MERE.keys())
+    proizvod_menu.configure(values=PROIZVODI)
 
-.product {
-    background: #fff;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-}
+def korak_unazad():
+    if not undo_stack:
+        messagebox.showinfo("Undo", "Nema više koraka unazad.")
+        return
+    redo_stack.append((ucitaj_stanje(), ucitaj_proiz()))
+    snap = undo_stack.pop()
+    _restore_snapshot(snap)
+    prikazi()
+def korak_unapred():
+    if not redo_stack:
+        messagebox.showinfo("Redo", "Nema više koraka unapred.")
+        return
+    undo_stack.append((ucitaj_stanje(), ucitaj_proiz()))
+    snap = redo_stack.pop()
+    _restore_snapshot(snap)
+    prikazi()
 
-.product img {
-    width: 100%;
-    height: 200px;
-    object-fit: cover;
-}
+# ---------------------------------------------------------------
 
-.product-content {
-    padding: 15px;
-}
+DATA_FILE      = "stanje_magacina.json"
+PROIZVODI_FILE = "proizvodi.json"
+LOG_FILE       = "log_magacin.json"
+BACKUP_META_FILE = "backup_meta.json"
 
-.product h3 {
-    margin: 0 0 10px;
-}
+GORNJE_VALUTE = ["RSD","EUR","USD","CHF","GBP"]
+EVR_VALUTE    = ["ALL","AMD","AZN","BAM","BGN","CZK","DKK","GEL","HRK","HUF",
+                 "ISK","MDL","MKD","NOK","PLN","RON","RUB","SEK","TRY","UAH"]
+SVE_VALUTE = GORNJE_VALUTE + EVR_VALUTE
 
-.price {
-    color: green;
-    font-weight: bold;
-    margin-bottom: 10px;
-}
+# ---------- inicijalni fajlovi ----------
+for f, init in (
+    (DATA_FILE, {}),
+    (LOG_FILE , []),
+    (PROIZVODI_FILE, {
+        "Luster kuka":{
+            "3x30":{"cena":1.6,"valuta":"EUR","sifra":"LK-330"},
+            "4x40":{"cena":2.0,"valuta":"EUR","sifra":"LK-440"}},
+        "Rajber kuka":{
+            "5x50":{"cena":220,"valuta":"RSD","sifra":"RK-550"},
+            "6x60":{"cena":250,"valuta":"RSD","sifra":"RK-660"}},
+    })
+):
+    if not os.path.exists(f):
+        with open(f, "w", encoding="utf-8") as fp:
+            json.dump(init, fp, indent=4)
 
-.product button {
-    width: 100%;
-    padding: 10px;
-    background: #25D366;
-    color: #fff;
-    border: none;
-    font-size: 16px;
-    cursor: pointer;
-}
+# ---------- helper (više nema lambda) ----------
+def ucitaj_stanje():
+    with open(DATA_FILE, encoding="utf-8") as f:
+        return json.load(f)
 
-.product button:hover {
-    background: #1da851;
-}
+def sacuvaj_stanje(s):
+    with open(DATA_FILE, "w", encoding="utf-8") as f:
+        json.dump(s, f, indent=4)
 
-/* FOOTER */
-footer {
-    background: #111;
-    color: #fff;
-    text-align: center;
-    padding: 15px;
-    margin-top: 30px;
-}
-</style>
-</head>
+def ucitaj_proiz():
+    with open(PROIZVODI_FILE, encoding="utf-8") as f:
+        return json.load(f)
 
-<body>
+def sacuvaj_proiz(p):
+    with open(PROIZVODI_FILE, "w", encoding="utf-8") as f:
+        json.dump(p, f, indent=4)
 
-<header>
-    <h1>TOPMETAL94</h1>
-    <p>Prodaja metala na veliko i malo</p>
-</header>
+def ucitaj_log():
+    with open(LOG_FILE, encoding="utf-8") as f:
+        return json.load(f)
 
-<div class="container">
-    <h2>Naši proizvodi</h2>
-
-    <div class="products">
-
-        <div class="product">
-            <img src="https://via.placeholder.com/400x300" alt="Proizvod 1">
-            <div class="product-content">
-                <h3>Proizvod 1</h3>
-                <div class="price">Cena: na upit</div>
-                <button onclick="order('Proizvod 1')">Poruči</button>
-            </div>
-        </div>
-
-        <div class="product">
-            <img src="https://via.placeholder.com/400x300" alt="Proizvod 2">
-            <div class="product-content">
-                <h3>Proizvod 2</h3>
-                <div class="price">Cena: na upit</div>
-                <button onclick="order('Proizvod 2')">Poruči</button>
-            </div>
-        </div>
-
-        <div class="product">
-            <img src="https://via.placeholder.com/400x300" alt="Proizvod 3">
-            <div class="product-content">
-                <h3>Proizvod 3</h3>
-                <div class="price">Cena: na upit</div>
-                <button onclick="order('Proizvod 3')">Poruči</button>
-            </div>
-        </div>
-
-    </div>
-</div>
-
-<footer>
-    <p>Kontakt: Viber / WhatsApp | © Topmetal94</p>
-</footer>
-
-<script>
-function order(product) {
-    const phone = "381600000000"; // OVDE upiši svoj broj (bez +)
-    const text = encodeURIComponent("Zainteresovan sam za proizvod: " + product + " | Topmetal94");
-    window.open("https://wa.me/" + phone + "?text=" + text, "_blank");
-}
-</script>
-
-</body>
-</html>
+def sacuvaj_log(l):
+    with open(LOG_FILE, "w", encoding="utf-8") as f:
+        json.dump(l, f, indent=4)
