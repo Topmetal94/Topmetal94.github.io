@@ -1,0 +1,4 @@
+/repozitorijum
+   index.html
+   /images
+       mojaslika.png
